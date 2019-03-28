@@ -36,10 +36,7 @@ class Dataset(object):
         return ConcatDataset([self, other])
 ```
 
-> 这是一个抽象类, 自定义的Dataset需要继承它并且实现下面两个成员方法：
->
-> - \__getitem__()
-> - \__len__()
+> 这是一个抽象类, 自定义的Dataset需要继承它并且实现下面两个成员方法： __getitem__() 和 __len__()
 
 ## (二) 实例
 
@@ -141,7 +138,37 @@ class MNIST(data.Dataset):
 > 依照1的例子，实现自定义dataset，采用的数据集为iris数据集，csv文件，代码如下：
 
 ```Python
+###################### load packages ########################
+import torch.utils.data
+import pandas as pd
+import numpy as np
 
+
+###################### IrisDataset class ########################
+class IrisDataset(torch.utils.data.Dataset):
+
+    ############ init ###########
+    def __init__(self, data_path, train=True, transform=None, target_transform=None):
+        self.transform = transform
+        self.train = train
+        self.target_transform = target_transform
+        self.data = pd.read_csv(data_path, sep=',')
+
+    ############ get data ###########
+    def __getitem__(self, index):
+        labels = {'setosa': 0, 'virginica': 1, 'versicolor': 2}
+
+        if self.train:
+            feature, label = self.data.iloc[index:index + 1, 0:-1].values.reshape(4), self.data.iloc[index:index + 1, -1].values[0]
+        else:
+            feature, label = self.data.iloc[index:index + 1, 0:-1].values.reshape(4), self.data.iloc[index:index + 1, -1].values[0]
+
+        return feature, int(labels[label])
+
+
+    ############ get data length ###########
+    def __len__(self):
+        return len(self.data)
 ```
 
 ## (二) torch.utils.data.DataLoader
@@ -269,5 +296,185 @@ for data in dataloader:
 > - 数据读完后，`__next__()` 抛出一个 `StopIteration` 异常， for循环结束，`dataloader` 失效。
 
 # 三. 代码
+> 搭建单层神经网络训练模型，代码入下：
+
+## main
+
+```python
+###################### load packages ########################
+import torch
+import torch.utils.data
+import Dataset
+import model
+import torch.nn as nn
+import torch.optim as optim
+from torch.autograd import Variable
+
+###################### 参数设置 ########################
+path = "iris.csv"
+batch_size = 10
+epoch = 2
+
+input_size = 4
+hidden_size = 4
+num_classes = 3
 
 
+###################### load data ########################
+dataset_train = Dataset.IrisDataset(path, train=True)
+dataset_test = Dataset.IrisDataset(path, train=False)
+
+data_loader_train = torch.utils.data.DataLoader(dataset=dataset_train, batch_size=batch_size, shuffle=True)
+data_loader_test = torch.utils.data.DataLoader(dataset=dataset_test, batch_size=batch_size, shuffle=True)
+
+
+################# train #################
+def train(train_loader, model, optimizer, cost, epoch):
+
+    print("Start training:")
+
+    ########### epoch ##########
+    for i in range(epoch):
+        train_correct = 0
+        total_cnt = 0
+
+        ############## batch #############
+        for batch_idx, (data, target) in enumerate(train_loader):
+
+            ############ get data and target #########
+            data, target = Variable(data), Variable(target)
+
+            ############ optimizer ############
+            optimizer.zero_grad()
+
+            ############ get model output ############
+            output = model(data)
+
+            ############ get predict label ############
+            _, pred = torch.max(output.data, 1)
+
+            ############ loss ############
+            loss = cost(output, target)
+            loss.backward()
+
+            ############ optimizer ############
+            optimizer.step()
+
+            ############ result ############
+            total_cnt += data.data.size()[0]
+            train_correct += torch.sum(pred == target.data)
+
+            ############ show train result ############
+            if (batch_idx+1) % 10 == 0:
+                print("epoch: {}, batch_index: {}, train loss: {:.6f}, train correct: {:.2f}%".format(
+                    i, batch_idx+1, loss, 100*train_correct/total_cnt))
+
+    print("Training is over!")
+
+
+################# test #################
+def test(test_loader, model, cost):
+
+    print("Start testing:")
+
+    ############ batch ############
+    for batch_idx, (data, target) in enumerate(test_loader):
+
+        ############ get data and target ############
+        data, target = Variable(data), Variable(target)
+
+        ############ get model output ############
+        output = model(data)
+
+
+        ############ get predict label ############
+        _,pred = torch.max(output.data, 1)
+
+        ############ loss ############
+        loss = cost(output, target)
+
+        ############ accuracy ############
+        test_correct = torch.sum(pred == target.data)
+
+        print("batch_index: {}, test loss: {:.6f}, test correct: {:.2f}%".format(
+                batch_idx + 1, loss.item(), 100*test_correct/data.data.size()[0]))
+
+    print("Testing is over!")
+
+
+###################### model ########################
+fcn = model.NeuralNet(input_size, hidden_size, num_classes)
+
+################# optimizer and loss #################
+optimizer = optim.Adam(fcn.parameters(), lr=0.001)
+cost = nn.CrossEntropyLoss()
+
+
+################# train #################
+train(data_loader_train, fcn, optimizer, cost, epoch)
+
+################# test #################
+test(data_loader_test, fcn, cost)
+```
+
+## Dataset
+
+```python
+###################### load packages ########################
+import torch.utils.data
+import pandas as pd
+import numpy as np
+
+
+###################### IrisDataset class ########################
+class IrisDataset(torch.utils.data.Dataset):
+
+    ############ init ###########
+    def __init__(self, data_path, train=True, transform=None, target_transform=None):
+        self.transform = transform
+        self.train = train
+        self.target_transform = target_transform
+        self.data = pd.read_csv(data_path, sep=',')
+
+    ############ get data ###########
+    def __getitem__(self, index):
+        labels = {'setosa': 0, 'virginica': 1, 'versicolor': 2}
+
+        if self.train:
+            feature, label = self.data.iloc[index:index + 1, 0:-1].values.reshape(4), self.data.iloc[index:index + 1, -1].values[0]
+        else:
+            feature, label = self.data.iloc[index:index + 1, 0:-1].values.reshape(4), self.data.iloc[index:index + 1, -1].values[0]
+
+        return feature, int(labels[label])
+
+
+    ############ get data length ###########
+    def __len__(self):
+        return len(self.data)
+```
+
+## model
+
+```python
+###################### load packages ########################
+import torch.nn as nn
+
+
+###################### model  ########################
+'''
+Fully connected neural network
+'''
+class NeuralNet(nn.Module):
+
+    def __init__(self, input_size, hidden_size, num_classes):
+        super(NeuralNet, self).__init__()
+        self.fc1 = nn.Linear(input_size, hidden_size)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(hidden_size, num_classes)
+
+    def forward(self, x):
+        out = self.fc1(x.float())
+        out = self.relu(out)
+        out = self.fc2(out)
+        return out
+```
