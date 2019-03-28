@@ -296,7 +296,7 @@ for data in dataloader:
 > - 数据读完后，`__next__()` 抛出一个 `StopIteration` 异常， for循环结束，`dataloader` 失效。
 
 # 三. 代码
-> 搭建单层神经网络训练模型，代码入下：
+> 搭建单层神经网络训练模型，代码如下：
 
 ## main
 
