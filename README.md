@@ -125,11 +125,11 @@ class MNIST(data.Dataset):
         return fmt_str
 ```
 
-#### (1) \__getitem__()
+#### (1) \ __getitem__()
 
 > 该方法实现了每次如何读取数据，以及对数据做的各种处理 transform，常用的有resize、Resize、RandomCrop、Normalize和ToTensor(可以把一个 `PIL或numpy` 图片转为 `torch.Tensor`)
 
-#### (2) \__len__()
+#### (2) \ __len__()
 
 > 返回整个数据集的长度
 
@@ -302,9 +302,12 @@ for data in dataloader:
 > - 数据读完后，`__next__()` 抛出一个 `StopIteration` 异常， for循环结束，`dataloader` 失效。
 
 # 三. 代码
-> 搭建单层神经网络训练模型，代码如下：
 
-## main
+## (一) csv数据集
+
+> 读取iris数据集，搭建单层神经网络训练模型，代码如下：
+
+### main
 
 ```python
 ###################### load packages ########################
@@ -423,7 +426,7 @@ train(data_loader_train, fcn, optimizer, cost, epoch)
 test(data_loader_test, fcn, cost)
 ```
 
-## Dataset
+### Dataset
 
 ```python
 ###################### load packages ########################
@@ -466,7 +469,7 @@ class IrisDataset(torch.utils.data.Dataset):
 
 ```
 
-## model
+### model
 
 ```python
 ###################### load packages ########################
