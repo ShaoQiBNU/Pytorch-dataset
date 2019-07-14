@@ -125,11 +125,11 @@ class MNIST(data.Dataset):
         return fmt_str
 ```
 
-#### (1) \ __getitem__()
+#### (1) \\__getitem__()
 
 > 该方法实现了每次如何读取数据，以及对数据做的各种处理 transform，常用的有resize、Resize、RandomCrop、Normalize和ToTensor(可以把一个 `PIL或numpy` 图片转为 `torch.Tensor`)
 
-#### (2) \ __len__()
+#### (2) \\__len__()
 
 > 返回整个数据集的长度
 
@@ -493,4 +493,136 @@ class NeuralNet(nn.Module):
         out = self.relu(out)
         out = self.fc2(out)
         return out
+```
+
+## (二) 影像数据集
+> 对于存储在文件夹里的图片数据集，首先需要生成一个存储图片路径和标签的文件，用于下面读取数据，具体代码如下：
+
+### 文件生成
+
+```python
+# -*- coding: utf-8 -*-
+"""
+读取枸杞数据，将数据的存储路径和label写入csv文件
+"""
+
+##################### load packages #####################
+import numpy as np
+import os
+from PIL import Image
+from skimage import io, data
+import scipy.io
+import tensorflow as tf
+import random
+import matplotlib.pyplot as plt
+import cv2
+import pandas as pd
+
+
+labels = {'MQ2':0, 'NNQ9':1, 'NQ1':2, 'NQ5':3, 'NQ7':4, 'NQ8':5}
+
+
+##################### load gouqi data ##########################
+def gouqi_preprocess(gouqi_folder):
+    '''
+    gouqi_floder: gouqi original path 原始枸杞的路径
+    '''
+
+    ######## gouqi data path 数据保存路径 ########
+    gouqi_dir = list()
+
+    ######## gouqi data dirs 生成保存数据的名称 ########
+    for img_dir in os.listdir(gouqi_folder):
+
+        for img in os.listdir(os.path.join(gouqi_folder, img_dir)):
+            gouqi_dir.append(img)
+
+    ######## random shuffle gouqi data dirs 打乱数据的绝对路径和名称排序 ########
+    random.shuffle(gouqi_dir)
+
+    length = int(0.8 * len(gouqi_dir))
+
+
+    ###################### gouqi train data #####################
+    gouqi_train=[]
+    
+    for img_dir in gouqi_dir[0:length]:
+
+        ######## get label ########
+        label = labels[img_dir.split('_')[0]]
+        
+        gouqi_train.append(['./data/'+img_dir,label])
+
+    gouqi_train_df = pd.DataFrame(gouqi_train)
+    gouqi_train_df.to_csv("C:/Users/shaoqi/Desktop/gouqi_train.csv", index=False, header=None)
+    
+    print("train is over!")
+    
+    
+    
+    ###################### gouqi test data #####################
+    gouqi_test=[]
+    
+    for img_dir in gouqi_dir[length:len(gouqi_dir)]:  
+
+        ######## get label ########
+        label = labels[img_dir.split('_')[0]]
+        
+        gouqi_test.append(['./data/'+img_dir,label])
+    
+    gouqi_test_df = pd.DataFrame(gouqi_test)
+    gouqi_test_df.to_csv("C:/Users/shaoqi/Desktop/gouqi_test.csv", index=False, header=None)
+    
+    print("test is over!")
+
+
+################ main函数入口 ##################
+if __name__ == '__main__':
+    ######### gouqi path 枸杞数据存放路径 ########
+    gouqi_folder = 'D:\\SQ\\枸杞\\分类\\单个'
+
+    ######## 数据预处理 ########
+    gouqi_preprocess(gouqi_folder)
+```
+
+
+### Dataset
+```python
+###################### load packages ########################
+import torch.utils.data
+import pandas as pd
+from skimage import io, data
+
+###################### Dataset class ########################
+class ImageDataset(torch.utils.data.Dataset):
+
+    ############ init ###########
+    def __init__(self, filenames, train=True, transform=None):
+        self.transform = transform
+        self.train = train
+
+        self.train_data = pd.read_csv(filenames, sep=',', header=None)
+        self.test_data = pd.read_csv(filenames, sep=',', header=None)
+
+
+    ############ get data ###########
+    def __getitem__(self, index):
+
+        if self.train:
+            fn, label = self.train_data.iloc[index:index+1, 0].values[0], self.train_data.iloc[index:index+1, 1].values[0]
+        else:
+            fn, label = self.test_data.iloc[index:index + 1, 0].values[0], self.test_data.iloc[index:index + 1, 1].values[0]
+
+        img = io.imread(fn)
+        label = int(label)
+
+        return img, label
+
+
+    ############ get data length ###########
+    def __len__(self):
+        if self.train:
+           return len(self.train_data)
+        else:
+           return len(self.test_data)
 ```
