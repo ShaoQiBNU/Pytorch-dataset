@@ -2,7 +2,7 @@
 import torch.utils.data
 import pandas as pd
 import numpy as np
-from sklearn.cross_validation import train_test_split
+from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 
 
@@ -15,7 +15,7 @@ class IrisDataset(torch.utils.data.Dataset):
         self.train = train
         self.target_transform = target_transform
         self.data = pd.read_csv(data_path, sep=',')
-        self.train_data, self.test_data = train_test_split(self.data, test_size = 0.3)
+        self.train_data, self.test_data = train_test_split(shuffle(self.data), test_size = 0.3)
 
     ############ get data ###########
     def __getitem__(self, index):
